@@ -60,7 +60,7 @@ int main(){
 	//     scanf("%d ",&array[i]);
 	// }
 
-    klee_make_symbolic(T, sizeof(T), "T");
+    klee_make_symbolic(&T, sizeof(T), "T");
     klee_make_symbolic(array, 30 * sizeof(int), "array");
 
 	printf("%s\n", groupSum(0, T)==1?"YES":"NO");
