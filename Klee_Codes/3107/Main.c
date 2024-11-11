@@ -28,6 +28,7 @@ Output :
 YES
 */
 #include <stdio.h>
+#include <klee/klee.h>
 
 int N, T, array[30];
 

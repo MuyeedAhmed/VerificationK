@@ -37,6 +37,7 @@ Verdict:ACCEPTED, Visibility:0, Input:"20 5455
 "
 */
 #include <stdio.h>
+#include <klee/klee.h>
 
 int N, T, array[30]; // N won't be larger than 30
 int groupSum(int l, int p)
