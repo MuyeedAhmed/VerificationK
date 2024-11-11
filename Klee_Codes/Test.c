@@ -10,8 +10,6 @@ int main() {
 
     float result = x / y;
 
-    klee_assert(y != 0.0f);
-
     printf("Result of division: %f\n", result);
 
     return 0;
