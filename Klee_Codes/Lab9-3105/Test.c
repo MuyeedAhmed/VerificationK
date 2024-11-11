@@ -43,9 +43,9 @@ void str_rev(int n, char a[100]) {
 int main() {
     char str[100], str_copy[100];
     int size;
-
-    klee_make_symbolic(&size, sizeof(size), "size");
-    klee_assume(size > 0 && size < 100);
+    size = 100;
+    // klee_make_symbolic(&size, sizeof(size), "size");
+    // klee_assume(size > 0 && size < 100);
 
     klee_make_symbolic(str, size, "str");
     str[size] = '\0';
