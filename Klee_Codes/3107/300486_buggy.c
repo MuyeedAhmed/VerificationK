@@ -59,8 +59,7 @@ int main(){
 	// for(int i=0;i<N;i++){
 	//     scanf("%d ",&array[i]);
 	// }
-    klee_make_symbolic(T, sizeof(int), "T");
-    klee_make_symbolic(array, N * sizeof(int), "array");
+    klee_make_symbolic(array, 30 * sizeof(int), "array");
 
 	printf("%s\n", groupSum(0, T)==1?"YES":"NO");
 	return 0;
