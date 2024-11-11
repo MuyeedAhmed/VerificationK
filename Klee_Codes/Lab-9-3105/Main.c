@@ -24,8 +24,6 @@ baL noisruceR
 Output: 
 Recursion Lab
 */
-#include <stdio.h>
-#include <string.h>
 #include <klee/klee.h>
 
 void reverse(char [], int, int);
@@ -37,12 +35,10 @@ int main() {
     klee_make_symbolic(&size, sizeof(size), "size");
     klee_assume(size > 0 && size < 100);
 
-    klee_make_symbolic(str, size, "str");
+    klee_make_symbolic(str, sizeof(str), "str");
     str[size] = '\0';
 
     reverse(str, 0, size - 1);
-
-    printf("%s\n", str);
 
     return 0;
 }
