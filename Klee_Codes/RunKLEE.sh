@@ -7,6 +7,7 @@ mkdir -p "$OUTPUT_DIR"
 
 for c_file in "$SOURCE_DIR"/*.c; do
     base_name=$(basename "$c_file" .c)
+    echo $base_name
     file_output_dir="$OUTPUT_DIR/$base_name"
     
     rm -rf "$file_output_dir"
