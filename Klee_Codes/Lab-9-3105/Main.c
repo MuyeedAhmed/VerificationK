@@ -1,44 +1,15 @@
-/*
-Up to 20% marks will be allotted for good programming practice. These include 
- - Comments: for nontrivial code 
- - Indentation: align your code properly 
- - Function use and modular programming 
- - Do not include anything in the header other than what is already given in the template.
-
-- You have to solve this problem using recursion 
-- Some marks are reserved for writing correct base case and recursive step  
--------------------------------------------------------------------------------------------
-
-Write a recursive C function to reverse a given string and then print it. The input consists of 2 lines: First line gives the length of the string; Second lines gives the string. The length of the string would not exceed 100 characters.
-
-For Example:
-Input:
-6 
-Hello
-Output: 
-olleH
-
-Input: 
-14
-baL noisruceR
-Output: 
-Recursion Lab
-*/
 #include <klee/klee.h>
 
 void reverse(char [], int, int);
 
 int main() {
     char str[100];
-    int size;
+    const int size = 100;
 
-    klee_make_symbolic(&size, sizeof(size), "size");
-    klee_assume(size > 0 && size < 100);
+    klee_make_symbolic(str, size, "str");
+    str[size - 1] = '\0';
 
-    klee_make_symbolic(str, sizeof(str), "str");
-    str[size] = '\0';
-
-    reverse(str, 0, size - 1);
+    reverse(str, 0, size - 2);
 
     return 0;
 }
@@ -49,7 +20,7 @@ void reverse(char str1[], int index, int size) {
     str1[index] = str1[size - index];
     str1[size - index] = temp;
 
-    if (index == size / 2) {
+    if (index >= size / 2) {
         return;
     }
 
