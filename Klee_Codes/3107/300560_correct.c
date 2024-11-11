@@ -54,13 +54,15 @@ int groupSum(int len_covered, int partial_sum)
 int main()
 {
 	int N,T;  // (read N, T, and elements of array)
-	scanf("%d %d",&N,&T);
-	int i;
-	for(i=0;i<N;i++)
-	{
-	    scanf("%d",&array[i]);
-	}
-	if(N<=30)
+	// scanf("%d %d",&N,&T);
+	// int i;
+	// for(i=0;i<N;i++)
+	// {
+	//     scanf("%d",&array[i]);
+	// }
+	klee_make_symbolic(&T, sizeof(T), "T");
+    klee_make_symbolic(array, 30 * sizeof(int), "array");
+	// if(N<=30)
 	printf("%s\n", groupSum(N, T)==1?"YES":"NO");
 	return 0;
 }
