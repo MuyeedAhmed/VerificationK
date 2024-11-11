@@ -8,8 +8,13 @@ mkdir -p "$OUTPUT_DIR"
 for c_file in "$SOURCE_DIR"/*.c; do
     base_name=$(basename "$c_file" .c)
     file_output_dir="$OUTPUT_DIR/$base_name"
+    
+    rm -rf "$file_output_dir"
     mkdir -p "$file_output_dir"
-    clang -emit-llvm -c -g "$c_file" -I $(brew --prefix klee)/include -o "$file_output_dir/$base_name.bc"
-    klee --solver-backend=z3 --output-dir="$file_output_dir" "$file_output_dir/$base_name.bc"
+    
+    cp "$c_file" "$file_output_dir/"
+
+    clang -emit-llvm -c -g "$file_output_dir/$base_name.c" -I $(brew --prefix klee)/include -o "$file_output_dir/$base_name.bc"
+    klee --solver-backend=z3 "$file_output_dir/$base_name.bc"
 
 done
