@@ -20,6 +20,7 @@ public:
         const SourceManager &SM = *Result.SourceManager;
         SourceLocation StartLoc = IL->getBeginLoc();
 
+        // Log initial validation
         if (!StartLoc.isValid()) {
             llvm::errs() << "Invalid SourceLocation\n";
             return;
@@ -30,25 +31,22 @@ public:
             return;
         }
 
-        // Ensure text is accessible and safe
-        llvm::StringRef Text = SM.getBufferData(SM.getFileID(StartLoc));
-        unsigned Offset = SM.getFileOffset(StartLoc);
-        llvm::StringRef TokenText = Text.substr(Offset, 1);
-
-        // Confirm the token at this SourceLocation is expected
-        if (TokenText != "4" && TokenText != "1" && TokenText != "0") {
-            llvm::errs() << "Unexpected token: " << TokenText << "\n";
-            return;
-        }
-
-        llvm::errs() << "Processing line: " << SM.getSpellingLineNumber(StartLoc)
+        // Log the replacement context
+        llvm::errs() << "Attempting replacement at line: "
+                     << SM.getSpellingLineNumber(StartLoc)
                      << ", column: " << SM.getSpellingColumnNumber(StartLoc) << "\n";
+
+        // Validate file content around location
+        const char *Text = SM.getCharacterData(StartLoc);
+        llvm::errs() << "CharacterData at StartLoc: " << llvm::StringRef(Text, 10) << "\n";
 
         try {
             TheRewriter.ReplaceText(StartLoc, "0");
-            llvm::errs() << "Successfully replaced\n";
+            llvm::errs() << "Successfully replaced integer literal\n";
+        } catch (const std::exception &e) {
+            llvm::errs() << "Exception: " << e.what() << "\n";
         } catch (...) {
-            llvm::errs() << "Failed at " << StartLoc.printToString(SM) << "\n";
+            llvm::errs() << "Unknown failure while replacing text.\n";
         }
     }
 }
