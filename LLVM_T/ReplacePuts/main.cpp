@@ -20,7 +20,6 @@ public:
         const SourceManager &SM = *Result.SourceManager;
         SourceLocation StartLoc = IL->getBeginLoc();
 
-        // Log initial validation
         if (!StartLoc.isValid()) {
             llvm::errs() << "Invalid SourceLocation\n";
             return;
@@ -31,22 +30,25 @@ public:
             return;
         }
 
-        // Log the replacement context
+        // Get the text at SourceLocation
+        llvm::StringRef TokenText = Lexer::getSourceText(CharSourceRange::getTokenRange(IL->getSourceRange()), SM, Result.Context->getLangOpts());
+
         llvm::errs() << "Attempting replacement at line: "
                      << SM.getSpellingLineNumber(StartLoc)
-                     << ", column: " << SM.getSpellingColumnNumber(StartLoc) << "\n";
+                     << ", column: " << SM.getSpellingColumnNumber(StartLoc)
+                     << ", text: " << TokenText << "\n";
 
-        // Validate file content around location
-        const char *Text = SM.getCharacterData(StartLoc);
-        llvm::errs() << "CharacterData at StartLoc: " << llvm::StringRef(Text, 10) << "\n";
+        if (TokenText.empty()) {
+            llvm::errs() << "Empty TokenText\n";
+            return;
+        }
 
         try {
-            TheRewriter.ReplaceText(StartLoc, "0");
-            llvm::errs() << "Successfully replaced integer literal\n";
-        } catch (const std::exception &e) {
-            llvm::errs() << "Exception: " << e.what() << "\n";
+            // Replace the entire integer literal with "0"
+            TheRewriter.ReplaceText(IL->getSourceRange(), "0");
+            llvm::errs() << "Successfully replaced literal: " << TokenText << " -> 0\n";
         } catch (...) {
-            llvm::errs() << "Unknown failure while replacing text.\n";
+            llvm::errs() << "Replacement failed at " << StartLoc.printToString(SM) << "\n";
         }
     }
 }
