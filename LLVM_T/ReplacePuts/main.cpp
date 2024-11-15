@@ -30,18 +30,19 @@ public:
             return;
         }
 
-        // Get the actual text at this location and ensure it matches an integer
-        const char *Text = SM.getCharacterData(StartLoc);
-        if (Text == nullptr) {
-            llvm::errs() << "Invalid character data at SourceLocation\n";
-            return;
-        }
-
-        llvm::errs() << "Replacing text at line: " << SM.getSpellingLineNumber(StartLoc)
+        // Print detailed SourceLocation info
+        llvm::errs() << "Processing line: " << SM.getSpellingLineNumber(StartLoc)
                      << ", column: " << SM.getSpellingColumnNumber(StartLoc) << "\n";
 
-        // Replace only valid integers
-        TheRewriter.ReplaceText(StartLoc, "0");
+        // Replace valid literals only
+        try {
+            TheRewriter.ReplaceText(StartLoc, "0");
+            llvm::errs() << "Successfully replaced at "
+                         << SM.getSpellingLineNumber(StartLoc)
+                         << ":" << SM.getSpellingColumnNumber(StartLoc) << "\n";
+        } catch (...) {
+            llvm::errs() << "Failed at " << StartLoc.printToString(SM) << "\n";
+        }
     }
 }
 
