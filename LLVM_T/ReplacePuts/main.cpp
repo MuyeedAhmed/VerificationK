@@ -3,7 +3,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Refactoring/Refactoring.h"
+#include "clang/Tooling/Refactoring.h"
 
 using namespace clang;
 using namespace clang::tooling;
