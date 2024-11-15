@@ -1,9 +1,8 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Tooling/Tooling.h"
 #include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/Tooling.h"
 
 using namespace clang;
 using namespace clang::tooling;
@@ -15,10 +14,9 @@ public:
 
     void run(const MatchFinder::MatchResult &Result) override {
         if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("printfCall")) {
-            const Expr *Arg = CE->getArg(0);
-
-            // Replace 'printf' with 'puts'
-            TheRewriter.ReplaceText(CE->getBeginLoc(), "printf", "puts");
+            const SourceManager &SM = *Result.SourceManager;
+            SourceLocation StartLoc = CE->getBeginLoc();
+            TheRewriter.ReplaceText(StartLoc, 6, "puts"); // Replace "printf" with "puts"
             TheRewriter.RemoveText(CE->getArg(1)->getSourceRange());
         }
     }
@@ -28,18 +26,17 @@ private:
 };
 
 int main(int argc, const char **argv) {
-    clang::Tooling::CommonOptionsParser OptionsParser(argc, argv, nullptr);
-    clang::Tooling::ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
+    CommonOptionsParser OptionsParser(argc, argv, nullptr);
+    ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
 
-    clang::Rewriter Rewriter;
-    PrintfToPutsRewriter;
+    Rewriter TheRewriter;
+    PrintfToPutsRewriter Callback(TheRewriter);
 
     MatchFinder Finder;
     Finder.addMatcher(
-        callExpr(callee(functionRef("printf"))).build(),
-        &Finder
+        callExpr(callee(functionDecl(hasName("printf")))).bind("printfCall"),
+        &Callback
     );
 
-    return Tool.run(newFrontendActionFactory<Finder>());
+    return Tool.run(newFrontendActionFactory(&Finder).get());
 }
-
