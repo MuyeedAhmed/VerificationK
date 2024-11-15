@@ -28,7 +28,7 @@ private:
 };
 
 int main(int argc, const char **argv) {
-    CommonOptionsParser OptionsParser(argc, argv, llvm::cl::GeneralCategory);
+    CommonOptionsParser OptionsParser(argc, argv);
     ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
 
     Rewriter TheRewriter;
