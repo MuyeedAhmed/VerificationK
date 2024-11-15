@@ -16,15 +16,35 @@ public:
     ReplaceIntLiteralsRewriter(Rewriter &R) : TheRewriter(R) {}
 
     void run(const MatchFinder::MatchResult &Result) override {
-        if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
-            SourceLocation StartLoc = IL->getBeginLoc();
-            if (StartLoc.isValid() && Result.SourceManager->isInMainFile(StartLoc)) {
-                TheRewriter.ReplaceText(StartLoc, "0");
-            } else {
-                llvm::errs() << "Invalid or out-of-main-file SourceLocation\n";
-            }
+    if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
+        const SourceManager &SM = *Result.SourceManager;
+        SourceLocation StartLoc = IL->getBeginLoc();
+
+        if (!StartLoc.isValid()) {
+            llvm::errs() << "Invalid SourceLocation\n";
+            return;
         }
+
+        if (!SM.isInMainFile(StartLoc)) {
+            llvm::errs() << "SourceLocation not in main file\n";
+            return;
+        }
+
+        // Get the actual text at this location and ensure it matches an integer
+        const char *Text = SM.getCharacterData(StartLoc);
+        if (Text == nullptr) {
+            llvm::errs() << "Invalid character data at SourceLocation\n";
+            return;
+        }
+
+        llvm::errs() << "Replacing text at line: " << SM.getSpellingLineNumber(StartLoc)
+                     << ", column: " << SM.getSpellingColumnNumber(StartLoc) << "\n";
+
+        // Replace only valid integers
+        TheRewriter.ReplaceText(StartLoc, "0");
     }
+}
+
 
 private:
     Rewriter &TheRewriter;
