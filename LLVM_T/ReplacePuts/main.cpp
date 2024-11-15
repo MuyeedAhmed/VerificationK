@@ -19,40 +19,31 @@ public:
     if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
         const SourceManager &SM = *Result.SourceManager;
         SourceLocation StartLoc = IL->getBeginLoc();
-        SourceRange SR = IL->getSourceRange();
+        CharSourceRange TokenRange = CharSourceRange::getTokenRange(IL->getSourceRange());
 
-        if (!StartLoc.isValid()) {
-            llvm::errs() << "Invalid SourceLocation\n";
+        if (!StartLoc.isValid() || !SM.isInMainFile(StartLoc)) {
+            llvm::errs() << "Invalid or external SourceLocation\n";
             return;
         }
 
-        if (!SM.isInMainFile(StartLoc)) {
-            llvm::errs() << "SourceLocation not in main file\n";
-            return;
-        }
-
-        llvm::StringRef TokenText = Lexer::getSourceText(CharSourceRange::getTokenRange(SR), SM, Result.Context->getLangOpts());
-
-        llvm::errs() << "Attempting replacement at line: "
-                     << SM.getSpellingLineNumber(StartLoc)
-                     << ", column: " << SM.getSpellingColumnNumber(StartLoc)
-                     << ", text: " << TokenText << "\n";
+        llvm::StringRef TokenText = Lexer::getSourceText(TokenRange, SM, Result.Context->getLangOpts());
 
         if (TokenText.empty()) {
-            llvm::errs() << "Empty token text; skipping.\n";
+            llvm::errs() << "Empty token: Invalid Range\n";
             return;
         }
 
-        try {
-            // Remove the original range first (use length from TokenText)
-            TheRewriter.RemoveText(SR);
+        // Validate again:
+        llvm::errs() << "Valid: Replace line: "
+                     << SM.getSpellingLineNumber(StartLoc) << " ->" << TokenText << "\n";
 
-            // Insert the replacement text
+        // Try simple insert/remove by exact range offsets:
+        try {
+            TheRewriter.RemoveText(TokenRange);  // Single token literal only.
             TheRewriter.InsertText(StartLoc, "0");
-            
-            llvm::errs() << "Successfully replaced literal with 0.\n";
+            llvm::errs() << "Rewritten successfully to `0`!\n";
         } catch (...) {
-            llvm::errs() << "Unknown error during text replacement.\n";
+            llvm::errs() << "Failed to edit Text buffer at \n";
         }
     }
 }
