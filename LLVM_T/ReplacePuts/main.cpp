@@ -31,8 +31,14 @@ private:
 };
 
 int main(int argc, const char **argv) {
-    // Pass the OptionCategory object to CommonOptionsParser
-    CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
+    // Use CommonOptionsParser::create for compatibility with protected constructor
+    auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
+    if (!ExpectedParser) {
+        llvm::errs() << ExpectedParser.takeError();
+        return 1;
+    }
+
+    CommonOptionsParser &OptionsParser = ExpectedParser.get();
     ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
 
     Rewriter TheRewriter;
