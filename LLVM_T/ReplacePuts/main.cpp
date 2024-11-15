@@ -4,11 +4,14 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 
+#include "llvm/Support/raw_ostream.h"
+#include <fstream>
+
 using namespace clang;
 using namespace clang::tooling;
 using namespace clang::ast_matchers;
 
-// Define a category for command-line options
+// Define a command-line option category
 static llvm::cl::OptionCategory MyToolCategory("ReplaceIntLiterals Tool");
 
 class ReplaceIntLiteralsRewriter : public MatchFinder::MatchCallback {
@@ -16,38 +19,47 @@ public:
     ReplaceIntLiteralsRewriter(Rewriter &R) : TheRewriter(R) {}
 
     void run(const MatchFinder::MatchResult &Result) override {
-    if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
-        const SourceManager &SM = *Result.SourceManager;
-        SourceLocation StartLoc = IL->getBeginLoc();
-        CharSourceRange TokenRange = CharSourceRange::getTokenRange(IL->getSourceRange());
+        if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
+            const SourceManager &SM = *Result.SourceManager;
+            SourceLocation StartLoc = IL->getBeginLoc();
+            CharSourceRange TokenRange = CharSourceRange::getTokenRange(IL->getSourceRange());
 
-        if (!StartLoc.isValid() || !SM.isInMainFile(StartLoc)) {
-            llvm::errs() << "Invalid or external SourceLocation\n";
-            return;
-        }
+            llvm::errs() << "Attempting replacement at line: "
+                         << SM.getSpellingLineNumber(StartLoc)
+                         << ", column: " << SM.getSpellingColumnNumber(StartLoc)
+                         << ", text: ";
 
-        llvm::StringRef TokenText = Lexer::getSourceText(TokenRange, SM, Result.Context->getLangOpts());
+            llvm::StringRef TokenText = Lexer::getSourceText(TokenRange, SM, Result.Context->getLangOpts());
+            llvm::errs() << TokenText << "\n";
 
-        if (TokenText.empty()) {
-            llvm::errs() << "Empty token: Invalid Range\n";
-            return;
-        }
+            // Debugging: Dump buffer contents to validate correctness
+            llvm::errs() << "Dumping buffer:\n";
+            FileID FID = SM.getFileID(StartLoc);
+            const llvm::MemoryBuffer *Buffer = SM.getBuffer(FID);
+            if (Buffer) {
+                llvm::errs() << "Buffer data: " << Buffer->getBuffer().str() << "\n";
+            } else {
+                llvm::errs() << "Failed to retrieve buffer\n";
+                return;
+            }
 
-        // Validate again:
-        llvm::errs() << "Valid: Replace line: "
-                     << SM.getSpellingLineNumber(StartLoc) << " ->" << TokenText << "\n";
+            // Ensure valid token and rewrite
+            if (TokenText.empty()) {
+                llvm::errs() << "Empty token text; skipping rewrite.\n";
+                return;
+            }
 
-        // Try simple insert/remove by exact range offsets:
-        try {
-            TheRewriter.RemoveText(TokenRange);  // Single token literal only.
-            TheRewriter.InsertText(StartLoc, "0");
-            llvm::errs() << "Rewritten successfully to `0`!\n";
-        } catch (...) {
-            llvm::errs() << "Failed to edit Text buffer at \n";
+            try {
+                // Safely replace the integer literal with "0"
+                TheRewriter.ReplaceText(TokenRange, "0");
+                llvm::errs() << "Successfully replaced integer literal.\n";
+            } catch (const std::exception &e) {
+                llvm::errs() << "Exception caught during ReplaceText: " << e.what() << "\n";
+            } catch (...) {
+                llvm::errs() << "Unknown error during ReplaceText.\n";
+            }
         }
     }
-}
-
 
 private:
     Rewriter &TheRewriter;
@@ -67,10 +79,7 @@ int main(int argc, const char **argv) {
     ReplaceIntLiteralsRewriter Callback(TheRewriter);
 
     MatchFinder Finder;
-    Finder.addMatcher(
-        integerLiteral().bind("intLiteral"),
-        &Callback
-    );
+    Finder.addMatcher(integerLiteral().bind("intLiteral"), &Callback);
 
     return Tool.run(newFrontendActionFactory(&Finder).get());
 }
