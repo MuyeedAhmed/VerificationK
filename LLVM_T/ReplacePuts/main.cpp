@@ -20,28 +20,37 @@ public:
     void run(const MatchFinder::MatchResult &Result) override {
         if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("printfCall")) {
             const SourceManager &SM = *Result.SourceManager;
-            
-            // Check if the location is valid
             SourceLocation StartLoc = CE->getBeginLoc();
-            if (!StartLoc.isValid() || !SM.isInMainFile(StartLoc)) {
-                llvm::errs() << "Invalid SourceLocation. Skipping replacement.\n";
+
+            // Check if the SourceLocation is valid
+            if (!StartLoc.isValid()) {
+                llvm::errs() << "Invalid SourceLocation\n";
                 return;
             }
 
-            // Check if the replacement length (6 for "printf") is valid
-            if (SM.getFileID(StartLoc) != SM.getMainFileID()) {
-                llvm::errs() << "Replacement out of main file bounds. Skipping replacement.\n";
+            // Ensure that StartLoc is in the main file
+            if (!SM.isInMainFile(StartLoc)) {
+                llvm::errs() << "SourceLocation not in main file\n";
                 return;
             }
 
-            // Perform the replacement from "printf" to "puts"
+            // Ensure that the length to replace is within valid range
+            const char *Text = SM.getCharacterData(StartLoc, nullptr);
+            if (!Text || strncmp(Text, "printf", 6) != 0) {
+                llvm::errs() << "StartLoc does not point to 'printf'\n";
+                return;
+            }
+
+            // Safely replace "printf" with "puts"
             TheRewriter.ReplaceText(StartLoc, 6, "puts");
 
-            // Ensure there are extra arguments to remove
+            // Safely remove second argument if it exists
             if (CE->getNumArgs() > 1) {
                 SourceRange ArgRange = CE->getArg(1)->getSourceRange();
-                if (ArgRange.isValid()) {
+                if (ArgRange.isValid() && SM.isInMainFile(ArgRange.getBegin())) {
                     TheRewriter.RemoveText(ArgRange);
+                } else {
+                    llvm::errs() << "Invalid or out-of-bounds SourceRange for second argument\n";
                 }
             }
         }
