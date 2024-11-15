@@ -3,6 +3,8 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
+#include "clang/Frontend/FrontendActions.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace clang;
 using namespace clang::tooling;
@@ -17,12 +19,31 @@ public:
 
     void run(const MatchFinder::MatchResult &Result) override {
         if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("printfCall")) {
-            SourceLocation StartLoc = CE->getBeginLoc();
-            TheRewriter.ReplaceText(StartLoc, 6, "puts"); // Replace "printf" with "puts"
+            const SourceManager &SM = *Result.SourceManager;
             
-            // Remove additional arguments from printf call, leaving only the first argument.
-            SourceRange ArgRange = CE->getArg(1)->getSourceRange();
-            TheRewriter.RemoveText(ArgRange);
+            // Check if the location is valid
+            SourceLocation StartLoc = CE->getBeginLoc();
+            if (!StartLoc.isValid() || !SM.isInMainFile(StartLoc)) {
+                llvm::errs() << "Invalid SourceLocation. Skipping replacement.\n";
+                return;
+            }
+
+            // Check if the replacement length (6 for "printf") is valid
+            if (SM.getFileID(StartLoc) != SM.getMainFileID()) {
+                llvm::errs() << "Replacement out of main file bounds. Skipping replacement.\n";
+                return;
+            }
+
+            // Perform the replacement from "printf" to "puts"
+            TheRewriter.ReplaceText(StartLoc, 6, "puts");
+
+            // Ensure there are extra arguments to remove
+            if (CE->getNumArgs() > 1) {
+                SourceRange ArgRange = CE->getArg(1)->getSourceRange();
+                if (ArgRange.isValid()) {
+                    TheRewriter.RemoveText(ArgRange);
+                }
+            }
         }
     }
 
@@ -31,7 +52,6 @@ private:
 };
 
 int main(int argc, const char **argv) {
-    // Use CommonOptionsParser::create for compatibility with protected constructor
     auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
     if (!ExpectedParser) {
         llvm::errs() << ExpectedParser.takeError();
