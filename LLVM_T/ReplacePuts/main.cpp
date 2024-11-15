@@ -14,10 +14,12 @@ public:
 
     void run(const MatchFinder::MatchResult &Result) override {
         if (const CallExpr *CE = Result.Nodes.getNodeAs<CallExpr>("printfCall")) {
-            const SourceManager &SM = *Result.SourceManager;
             SourceLocation StartLoc = CE->getBeginLoc();
             TheRewriter.ReplaceText(StartLoc, 6, "puts"); // Replace "printf" with "puts"
-            TheRewriter.RemoveText(CE->getArg(1)->getSourceRange());
+            
+            // Remove additional arguments from printf call, leaving only the first argument.
+            SourceRange ArgRange = CE->getArg(1)->getSourceRange();
+            TheRewriter.RemoveText(ArgRange);
         }
     }
 
@@ -26,7 +28,7 @@ private:
 };
 
 int main(int argc, const char **argv) {
-    CommonOptionsParser OptionsParser(argc, argv, nullptr);
+    CommonOptionsParser OptionsParser(argc, argv, llvm::cl::GeneralCategory);
     ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
 
     Rewriter TheRewriter;
