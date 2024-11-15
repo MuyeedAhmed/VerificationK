@@ -35,11 +35,11 @@ public:
             // Debugging: Dump buffer contents to validate correctness
             llvm::errs() << "Dumping buffer:\n";
             FileID FID = SM.getFileID(StartLoc);
-            const llvm::MemoryBuffer *Buffer = SM.getBuffer(FID);
-            if (Buffer) {
-                llvm::errs() << "Buffer data: " << Buffer->getBuffer().str() << "\n";
+            llvm::StringRef BufferData = SM.getBufferData(FID, /*Invalid=*/nullptr);
+            if (!BufferData.empty()) {
+                llvm::errs() << "Buffer data: " << BufferData.substr(0, 100) << "...\n"; // Limit output for large files
             } else {
-                llvm::errs() << "Failed to retrieve buffer\n";
+                llvm::errs() << "Failed to retrieve buffer data or buffer is empty\n";
                 return;
             }
 
