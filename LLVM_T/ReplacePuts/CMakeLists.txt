@@ -10,6 +10,7 @@ find_package(Clang REQUIRED CONFIG)
 
 include_directories(${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
+add_executable(dummy EXCLUDE_FROM_ALL main.cpp)
 
 add_executable(PrintfToPuts main.cpp)
 target_link_libraries(PrintfToPuts
