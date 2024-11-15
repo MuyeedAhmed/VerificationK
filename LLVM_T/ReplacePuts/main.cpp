@@ -8,6 +8,9 @@ using namespace clang;
 using namespace clang::tooling;
 using namespace clang::ast_matchers;
 
+// Define a category for command-line options
+static llvm::cl::OptionCategory MyToolCategory("PrintfToPuts Tool");
+
 class PrintfToPutsRewriter : public MatchFinder::MatchCallback {
 public:
     PrintfToPutsRewriter(Rewriter &R) : TheRewriter(R) {}
@@ -28,7 +31,8 @@ private:
 };
 
 int main(int argc, const char **argv) {
-    CommonOptionsParser OptionsParser(argc, argv);
+    // Pass the OptionCategory object to CommonOptionsParser
+    CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
     ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
 
     Rewriter TheRewriter;
