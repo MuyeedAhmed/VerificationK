@@ -21,15 +21,13 @@ public:
         SourceLocation StartLoc = IL->getBeginLoc();
         SourceRange SR = IL->getSourceRange();
 
-        // Validate the SourceLocation
-        if (!StartLoc.isValid() || !SM.isInMainFile(StartLoc)) {
-            llvm::errs() << "Invalid or out-of-main-file SourceLocation\n";
+        if (!StartLoc.isValid()) {
+            llvm::errs() << "Invalid SourceLocation\n";
             return;
         }
 
-        // Validate the SourceRange
-        if (!SM.isInMainFile(SR.getBegin()) || !SM.isInMainFile(SR.getEnd())) {
-            llvm::errs() << "SourceRange spans out of main file\n";
+        if (!SM.isInMainFile(StartLoc)) {
+            llvm::errs() << "SourceLocation not in main file\n";
             return;
         }
 
@@ -41,15 +39,20 @@ public:
                      << ", text: " << TokenText << "\n";
 
         if (TokenText.empty()) {
-            llvm::errs() << "Empty or invalid token text\n";
+            llvm::errs() << "Empty token text; skipping.\n";
             return;
         }
 
         try {
-            TheRewriter.ReplaceText(SR, "0");
-            llvm::errs() << "Successfully replaced integer literal.\n";
+            // Remove the original range first (use length from TokenText)
+            TheRewriter.RemoveText(SR);
+
+            // Insert the replacement text
+            TheRewriter.InsertText(StartLoc, "0");
+            
+            llvm::errs() << "Successfully replaced literal with 0.\n";
         } catch (...) {
-            llvm::errs() << "Replacement failed for range: " << SR.printToString(SM) << "\n";
+            llvm::errs() << "Unknown error during text replacement.\n";
         }
     }
 }
