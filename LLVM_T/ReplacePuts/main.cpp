@@ -30,16 +30,23 @@ public:
             return;
         }
 
-        // Print detailed SourceLocation info
+        // Ensure text is accessible and safe
+        llvm::StringRef Text = SM.getBufferData(SM.getFileID(StartLoc));
+        unsigned Offset = SM.getFileOffset(StartLoc);
+        llvm::StringRef TokenText = Text.substr(Offset, 1);
+
+        // Confirm the token at this SourceLocation is expected
+        if (TokenText != "4" && TokenText != "1" && TokenText != "0") {
+            llvm::errs() << "Unexpected token: " << TokenText << "\n";
+            return;
+        }
+
         llvm::errs() << "Processing line: " << SM.getSpellingLineNumber(StartLoc)
                      << ", column: " << SM.getSpellingColumnNumber(StartLoc) << "\n";
 
-        // Replace valid literals only
         try {
             TheRewriter.ReplaceText(StartLoc, "0");
-            llvm::errs() << "Successfully replaced at "
-                         << SM.getSpellingLineNumber(StartLoc)
-                         << ":" << SM.getSpellingColumnNumber(StartLoc) << "\n";
+            llvm::errs() << "Successfully replaced\n";
         } catch (...) {
             llvm::errs() << "Failed at " << StartLoc.printToString(SM) << "\n";
         }
