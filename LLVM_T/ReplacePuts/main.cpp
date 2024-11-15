@@ -19,47 +19,46 @@ public:
     ReplaceIntLiteralsRewriter(Rewriter &R) : TheRewriter(R) {}
 
     void run(const MatchFinder::MatchResult &Result) override {
-        if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
-            const SourceManager &SM = *Result.SourceManager;
-            SourceLocation StartLoc = IL->getBeginLoc();
-            CharSourceRange TokenRange = CharSourceRange::getTokenRange(IL->getSourceRange());
+    if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
+        const SourceManager &SM = *Result.SourceManager;
+        SourceLocation StartLoc = IL->getBeginLoc();
+        SourceRange SR = IL->getSourceRange();
+        CharSourceRange TokenRange = CharSourceRange::getTokenRange(SR);
 
-            llvm::errs() << "Attempting replacement at line: "
-                         << SM.getSpellingLineNumber(StartLoc)
-                         << ", column: " << SM.getSpellingColumnNumber(StartLoc)
-                         << ", text: ";
+        llvm::errs() << "Attempting replacement at line: "
+                     << SM.getSpellingLineNumber(StartLoc)
+                     << ", column: " << SM.getSpellingColumnNumber(StartLoc)
+                     << ", text: ";
 
-            llvm::StringRef TokenText = Lexer::getSourceText(TokenRange, SM, Result.Context->getLangOpts());
-            llvm::errs() << TokenText << "\n";
+        llvm::StringRef TokenText = Lexer::getSourceText(TokenRange, SM, Result.Context->getLangOpts());
+        llvm::errs() << TokenText << "\n";
 
-            // Debugging: Dump buffer contents to validate correctness
-            llvm::errs() << "Dumping buffer:\n";
-            FileID FID = SM.getFileID(StartLoc);
-            llvm::StringRef BufferData = SM.getBufferData(FID, /*Invalid=*/nullptr);
-            if (!BufferData.empty()) {
-                llvm::errs() << "Buffer data: " << BufferData.substr(0, 100) << "...\n"; // Limit output for large files
-            } else {
-                llvm::errs() << "Failed to retrieve buffer data or buffer is empty\n";
-                return;
-            }
+        // Debug buffer validation
+        FileID FID = SM.getFileID(StartLoc);
+        llvm::StringRef BufferData = SM.getBufferData(FID, /*Invalid=*/nullptr);
+        if (BufferData.empty()) {
+            llvm::errs() << "Empty buffer; skipping replacement.\n";
+            return;
+        }
 
-            // Ensure valid token and rewrite
-            if (TokenText.empty()) {
-                llvm::errs() << "Empty token text; skipping rewrite.\n";
-                return;
-            }
+        llvm::errs() << "Buffer confirmed for file.\n";
 
-            try {
-                // Safely replace the integer literal with "0"
-                TheRewriter.ReplaceText(TokenRange, "0");
-                llvm::errs() << "Successfully replaced integer literal.\n";
-            } catch (const std::exception &e) {
-                llvm::errs() << "Exception caught during ReplaceText: " << e.what() << "\n";
-            } catch (...) {
-                llvm::errs() << "Unknown error during ReplaceText.\n";
-            }
+        try {
+            // Avoid complex ranges; just log replacement details
+            llvm::errs() << "Replacing: " << TokenText << " with 0\n";
+
+            // Replace exactly at location by inserting and removing in steps
+            TheRewriter.ReplaceText(SR, "0");
+
+            llvm::errs() << "Successfully replaced literal.\n";
+        } catch (const std::exception &e) {
+            llvm::errs() << "Exception caught: " << e.what() << "\n";
+        } catch (...) {
+            llvm::errs() << "Unknown failure during replacement.\n";
         }
     }
+}
+
 
 private:
     Rewriter &TheRewriter;
