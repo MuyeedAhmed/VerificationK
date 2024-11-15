@@ -19,19 +19,21 @@ public:
     if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
         const SourceManager &SM = *Result.SourceManager;
         SourceLocation StartLoc = IL->getBeginLoc();
+        SourceRange SR = IL->getSourceRange();
 
-        if (!StartLoc.isValid()) {
-            llvm::errs() << "Invalid SourceLocation\n";
+        // Validate the SourceLocation
+        if (!StartLoc.isValid() || !SM.isInMainFile(StartLoc)) {
+            llvm::errs() << "Invalid or out-of-main-file SourceLocation\n";
             return;
         }
 
-        if (!SM.isInMainFile(StartLoc)) {
-            llvm::errs() << "SourceLocation not in main file\n";
+        // Validate the SourceRange
+        if (!SM.isInMainFile(SR.getBegin()) || !SM.isInMainFile(SR.getEnd())) {
+            llvm::errs() << "SourceRange spans out of main file\n";
             return;
         }
 
-        // Get the text at SourceLocation
-        llvm::StringRef TokenText = Lexer::getSourceText(CharSourceRange::getTokenRange(IL->getSourceRange()), SM, Result.Context->getLangOpts());
+        llvm::StringRef TokenText = Lexer::getSourceText(CharSourceRange::getTokenRange(SR), SM, Result.Context->getLangOpts());
 
         llvm::errs() << "Attempting replacement at line: "
                      << SM.getSpellingLineNumber(StartLoc)
@@ -39,16 +41,15 @@ public:
                      << ", text: " << TokenText << "\n";
 
         if (TokenText.empty()) {
-            llvm::errs() << "Empty TokenText\n";
+            llvm::errs() << "Empty or invalid token text\n";
             return;
         }
 
         try {
-            // Replace the entire integer literal with "0"
-            TheRewriter.ReplaceText(IL->getSourceRange(), "0");
-            llvm::errs() << "Successfully replaced literal: " << TokenText << " -> 0\n";
+            TheRewriter.ReplaceText(SR, "0");
+            llvm::errs() << "Successfully replaced integer literal.\n";
         } catch (...) {
-            llvm::errs() << "Replacement failed at " << StartLoc.printToString(SM) << "\n";
+            llvm::errs() << "Replacement failed for range: " << SR.printToString(SM) << "\n";
         }
     }
 }
