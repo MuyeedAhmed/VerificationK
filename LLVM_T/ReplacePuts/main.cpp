@@ -9,16 +9,20 @@ using namespace clang::tooling;
 using namespace clang::ast_matchers;
 
 // Define a category for command-line options
-static llvm::cl::OptionCategory MyToolCategory("FooToBar Tool");
+static llvm::cl::OptionCategory MyToolCategory("ReplaceIntLiterals Tool");
 
-class FooToBarRewriter : public MatchFinder::MatchCallback {
+class ReplaceIntLiteralsRewriter : public MatchFinder::MatchCallback {
 public:
-    FooToBarRewriter(Rewriter &R) : TheRewriter(R) {}
+    ReplaceIntLiteralsRewriter(Rewriter &R) : TheRewriter(R) {}
 
     void run(const MatchFinder::MatchResult &Result) override {
-        if (const DeclRefExpr *DRE = Result.Nodes.getNodeAs<DeclRefExpr>("fooVar")) {
-            SourceLocation StartLoc = DRE->getLocation();
-            TheRewriter.ReplaceText(StartLoc, 3, "bar"); // Replace "foo" with "bar"
+        if (const IntegerLiteral *IL = Result.Nodes.getNodeAs<IntegerLiteral>("intLiteral")) {
+            SourceLocation StartLoc = IL->getBeginLoc();
+            if (StartLoc.isValid() && Result.SourceManager->isInMainFile(StartLoc)) {
+                TheRewriter.ReplaceText(StartLoc, "0");
+            } else {
+                llvm::errs() << "Invalid or out-of-main-file SourceLocation\n";
+            }
         }
     }
 
@@ -37,11 +41,11 @@ int main(int argc, const char **argv) {
     ClangTool Tool(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
 
     Rewriter TheRewriter;
-    FooToBarRewriter Callback(TheRewriter);
+    ReplaceIntLiteralsRewriter Callback(TheRewriter);
 
     MatchFinder Finder;
     Finder.addMatcher(
-        declRefExpr(to(varDecl(hasName("foo")))).bind("fooVar"),
+        integerLiteral().bind("intLiteral"),
         &Callback
     );
 

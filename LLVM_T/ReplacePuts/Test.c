@@ -1,5 +1,8 @@
+#include <stdio.h>
+
 int main() {
-    int foo = 42;
-    foo = foo + 1;
-    return foo;
+    int a = 42;
+    int b = 100;
+    printf("%d\n", a + b);
+    return a + b;
 }
