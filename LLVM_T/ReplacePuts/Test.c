@@ -1,6 +1,5 @@
-#include <stdio.h>
-
 int main() {
-    printf("Hello, world!\n");
-    return 0;
+    int foo = 42;
+    foo = foo + 1;
+    return foo;
 }
